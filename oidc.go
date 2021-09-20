@@ -8,11 +8,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pkg/browser"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
-	"os/exec"
 	"strings"
 	"time"
 )
@@ -90,14 +90,16 @@ func DoOIDCLogin(oidcConfigURL string, oidcClientID string) (string, error) {
 	authUrl := fmt.Sprintf("%s?%s", oidcConfig.AuthorizationEndpoint, params.Encode())
 
 	log.Printf("Opening %s\n", authUrl)
-	var cmd *exec.Cmd
-	cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", authUrl)
-	cmd.Start()
+	err = browser.OpenURL(authUrl)
+
+	if err != nil {
+		return "", fmt.Errorf("Unable to open browser to auth endpoint: %v", err)
+	}
 
 	otp, _ := waitForOTP(90, 4242)
 
 	if otp == "" {
-		return "", errors.New("timed out waiting for auth login")
+		return "", fmt.Errorf("Timeout while waiting for OIDC login")
 	}
 
 	params = url.Values{}
